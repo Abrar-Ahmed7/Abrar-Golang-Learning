@@ -31,11 +31,6 @@ type GradedStudent struct {
 }
 
 func main() {
-	// csvFile, err := os.Open("resources/grades.csv")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// defer csvFile.Close()
 	rows, err := readGradesCsv("resources/grades.csv")
 	if err != nil {
 		log.Fatal(err)
@@ -44,24 +39,27 @@ func main() {
 	// Parsing all Students
 	fmt.Print("\n *******All Students*******")
 	for _, student := range rows {
-		fmt.Println(student)
+		fmt.Println(student.string())
 	}
 
 	// Calculating Grades
 	fmt.Print("******Grades of all the students******\n")
-	for _, gradedStudent := range gradeStudents(rows) {
-		fmt.Println(gradedStudent)
+	for _, gs := range gradeStudents(rows) {
+		fmt.Println(gs.string())
 	}
+
+	gs := gradeStudents(rows)
 
 	// Finding Over All Topper
 	fmt.Print("\n******Over All Topper******\n")
-	fmt.Println(findOverallTopper(gradeStudents(rows)))
+	fmt.Println(findOverallTopper(gs).string())
 
 	// Finding Topper per University
 	fmt.Print("\n******Topper of Each University******\n")
-	for _, topper := range findTopperPerUniversity(gradeStudents(rows)) {
-		fmt.Println(topper)
+	for uni, topper := range findTopperPerUniversity(gs) {
+		fmt.Println(uni, "-", topper.string())
 	}
+
 }
 
 func readGradesCsv(path string) ([]Student, error) {
@@ -163,4 +161,12 @@ func calculateGrade(finalScore float64) Grade {
 	} else {
 		return A
 	}
+}
+
+func (s Student) string() string {
+	return fmt.Sprintf("%v %v %v %v %v %v %v", s.firstName, s.lastName, s.university, s.test1, s.test2, s.test3, s.test4)
+}
+
+func (gs GradedStudent) string() string {
+	return fmt.Sprintf("%v %v %v", gs.Student.string(), gs.finalScore, gs.grade)
 }
