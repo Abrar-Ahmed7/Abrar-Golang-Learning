@@ -8,21 +8,22 @@ import (
 	"strings"
 )
 
+type commands struct {
+	d, f, p string
+}
+
 func main() {
 	dirPath := "./"
-	fmt.Println("---------------Directories amd Files---------------")
-	printDirAndFiles(dirPath)
-	fmt.Println("---------------Directories---------------")
-	printDirAlone(dirPath)
-	fmt.Println("---------------Directories and Files with Realtive Path---------------")
-	printDirAndFilesWithRelPath(dirPath)
-	fmt.Println("---------------Directories Alone with Relative Path---------------")
-	printDirAloneWithRelPath(dirPath)
-	fmt.Println("---------------Directories and Files with Permission---------------")
-	printDirAndFilesWithPerm(dirPath)
+	c := commands{
+		d: "",
+		f: "",
+		p: "",
+	}
+
+	printDirFiles(dirPath, c)
 }
 
-func printDirAndFiles(dirPath string) {
+func printDirFiles(dirPath string, c commands) {
 	var dirCount, fileCount int
 	err := filepath.Walk(dirPath,
 		func(path string, file os.FileInfo, err error) error {
@@ -32,132 +33,42 @@ func printDirAndFiles(dirPath string) {
 			var tabSpace string
 			currentPath := strings.Split(path, "/")
 			for i := 0; i < len(currentPath); i++ {
-				if path == "./" {
+				if path == dirPath {
 					continue
 				}
 				tabSpace = "|--" + tabSpace
 			}
 			if file.IsDir() {
 				dirCount++
+				if c.d == "d" {
+					applyCommands(tabSpace, file, path, c)
+				}
 			}
 			fileCount++
-			fmt.Println(tabSpace, file.Name())
+			if c.d != "d" {
+				applyCommands(tabSpace, file, path, c)
+			}
+
 			return nil
 		})
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("\n\n", dirCount, "directories,", fileCount, "files")
+	if c.d == "d" {
+		fmt.Println("\n", dirCount, "directories")
+	} else {
+		fmt.Println("\n", dirCount, "directories,", fileCount-dirCount, "files")
+	}
 }
 
-func printDirAlone(dirPath string) {
-	var dirCount int
-	err := filepath.Walk(dirPath,
-		func(path string, file os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			var tabSpace string
-			currentPath := strings.Split(path, "/")
-			for i := 0; i < len(currentPath); i++ {
-				if path == "./" {
-					continue
-				}
-				tabSpace = "|--" + tabSpace
-			}
-			if file.IsDir() {
-				dirCount++
-				fmt.Println(tabSpace, file.Name())
-			}
-
-			return nil
-		})
-	if err != nil {
-		log.Fatal(err)
+func applyCommands(tabSpace string, file os.FileInfo, path string, c commands) {
+	if c.f == "f" && c.p == "p" {
+		fmt.Printf("%v [%v] %v\n ", tabSpace, file.Mode().Perm(), path)
+	} else if c.f != "f" && c.p == "p" {
+		fmt.Printf("%v [%v] %v\n ", tabSpace, file.Mode().Perm(), file.Name())
+	} else if c.f == "f" && c.p != "p" {
+		fmt.Println(tabSpace, path)
+	} else {
+		fmt.Println(tabSpace, file.Name())
 	}
-	fmt.Println("\n\n", dirCount, "directories")
-}
-
-func printDirAndFilesWithRelPath(dirPath string) {
-	var dirCount, fileCount int
-	err := filepath.Walk(dirPath,
-		func(path string, file os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			var tabSpace string
-			currentPath := strings.Split(path, "/")
-			for i := 0; i < len(currentPath); i++ {
-				if path == "./" {
-					continue
-				}
-				tabSpace = "|--" + tabSpace
-			}
-			if file.IsDir() {
-				dirCount++
-			}
-			fileCount++
-			fmt.Println(tabSpace, path)
-			return nil
-		})
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("\n\n", dirCount, "directories,", fileCount, "files")
-}
-
-func printDirAloneWithRelPath(dirPath string) {
-	var dirCount int
-	err := filepath.Walk(dirPath,
-		func(path string, file os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			var tabSpace string
-			currentPath := strings.Split(path, "/")
-			for i := 0; i < len(currentPath); i++ {
-				if path == "./" {
-					continue
-				}
-				tabSpace = "|--" + tabSpace
-			}
-			if file.IsDir() {
-				dirCount++
-				fmt.Println(tabSpace, path)
-			}
-
-			return nil
-		})
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("\n\n", dirCount, "directories")
-}
-
-func printDirAndFilesWithPerm(dirPath string) {
-	var dirCount, fileCount int
-	err := filepath.Walk(dirPath,
-		func(path string, file os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			var tabSpace string
-			currentPath := strings.Split(path, "/")
-			for i := 0; i < len(currentPath); i++ {
-				if path == "./" {
-					continue
-				}
-				tabSpace = "|--" + tabSpace
-			}
-			if file.IsDir() {
-				dirCount++
-			}
-			fileCount++
-			fmt.Printf("\n%v [%v] %v", tabSpace, file.Mode().Perm(), file.Name())
-			return nil
-		})
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("\n\n", dirCount, "directories,", fileCount, "files")
 }
