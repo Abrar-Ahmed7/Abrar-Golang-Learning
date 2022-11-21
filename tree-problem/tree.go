@@ -25,32 +25,9 @@ const (
 
 func main() {
 	dirPath := os.Args[len(os.Args)-1]
-
 	c := parseArgs()
 	printDirTree(dirPath, c)
-
-	// approach2(".")
-	// printDirectory("./folder1", 0)
-
-	// entries, err := ioutil.ReadDir("/home/abrar/Documents")
-	// if err != nil {
-	// 	fmt.Printf("error reading %s: %s\n", "/home/abrar/Documents", err.Error())
-	// }
-	// for _, e := range entries {
-	// 	// fmt.Println(strings.Split(e.Name(), "/"))
-	// 	if strings.HasPrefix(e.Name(), ".") || strings.Contains(e.Name(), "lstat") {
-	// 		continue
-	// 	}
-	// 	if e.IsDir() {
-	// 		printDirFiles(e.Name(), c)
-	// 	} else {
-	// 		continue
-	// 	}
-	// }
-	// fmt.Println("\t1 tab")
 }
-
-// func parseCommand(commands os.Args )
 
 func parseArgs() configs {
 	c := configs{}
