@@ -15,6 +15,8 @@ func TestReadGradesCsv(t *testing.T) {
 
 	// using testing package
 	if len(students) != 30 {
+		// t.Errorf("Expected number of students is not same as"+
+		// 	" actual number %d", len(students))
 		t.Errorf("Expected number of students is not same as"+
 			" actual number %d", len(students))
 	}

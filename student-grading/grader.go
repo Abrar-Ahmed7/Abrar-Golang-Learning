@@ -129,9 +129,9 @@ func findOverallTopper(gradedStudents []GradedStudent) GradedStudent {
 func findTopperPerUniversity(gradedStudents []GradedStudent) map[string]GradedStudent {
 	var topperPerUniversity = make(map[string]GradedStudent)
 	for _, gs := range gradedStudents {
-		if gs, ok := topperPerUniversity[gs.university]; ok {
-			topperPerUniversity[gs.university] = gs
-		}
+		// if gs, ok := topperPerUniversity[gs.university]; ok {
+		// 	topperPerUniversity[gs.university] = gs
+		// }
 		if topperPerUniversity[gs.university].finalScore < gs.finalScore {
 			topperPerUniversity[gs.university] = gs
 		}
