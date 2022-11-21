@@ -373,13 +373,13 @@ func hasNext(children []*Node, child *Node) bool {
 	return false
 }
 
-func next(children []*Node, child *Node) bool {
+func next(children []*Node, child *Node) *Node {
 	for i, c := range children {
 		if c == child && children[i+1] != nil {
-			return true
+			return children[i+1]
 		}
 	}
-	return false
+	return &Node{}
 }
 
 func addRelPathAndPerm(result *list.List, s string) {
