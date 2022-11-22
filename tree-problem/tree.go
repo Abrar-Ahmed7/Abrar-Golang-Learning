@@ -13,8 +13,8 @@ import (
 )
 
 type configs struct {
-	dirOnly, relPath, perm bool
-	level                  int
+	dirOnly, relPath, perm, json bool
+	level                        int
 }
 
 const (
@@ -26,7 +26,8 @@ const (
 func main() {
 	dirPath := os.Args[len(os.Args)-1]
 	c := parseArgs()
-	printDirTree(dirPath, c)
+	printTree(dirPath, c)
+
 }
 
 func parseArgs() configs {
@@ -44,12 +45,20 @@ func parseArgs() configs {
 		if os.Args[i] == "-L" {
 			c.level = convertStrToInt(os.Args[i+1])
 		}
+		if os.Args[i] == "-J" {
+			c.json = true
+		}
 	}
 	return c
 }
 
-func printDirTree(dirPath string, c configs) {
-	dirTree := getDirTree(dirPath, c)
+func printTree(dirPath string, c configs) {
+	var dirTree []string
+	if c.json == true {
+		dirTree = getJsonTree(dirPath, c)
+	} else {
+		dirTree = getDirTree(dirPath, c)
+	}
 	for _, d := range dirTree {
 		fmt.Println(d)
 	}
@@ -121,6 +130,75 @@ func applyConfigs(tabSpace string, file os.FileInfo, path string, c configs) str
 		return tabSpace + path
 	} else {
 		return tabSpace + file.Name()
+	}
+}
+
+func getJsonTree(dirPath string, c configs) []string {
+	var dirCount, fileCount int
+	var jsonTree []string
+	jsonTree = append(jsonTree, "[")
+	err := filepath.Walk(dirPath,
+		func(path string, file os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			var tabSpace string
+			currentPath := strings.Split(path, "/")
+			var level int
+			if c.level != 0 {
+				level = c.level
+			} else {
+				level = len(currentPath)
+			}
+			for i := 0; i < len(currentPath); i++ {
+				if path == dirPath {
+					continue
+				}
+				tabSpace = tabSpace + "  "
+			}
+			if file.IsDir() {
+				dirCount++
+				if c.dirOnly {
+					if len(currentPath) <= level {
+						jsonTree = append(jsonTree, applyConfigsForJson(tabSpace+"{\"type\":\"directory\",\"name\":", file, path, c))
+						// fmt.Println(applyCommands(tabSpace, file, path, c))
+					}
+				}
+			}
+			fileCount++
+			if !c.dirOnly {
+				if len(currentPath) <= level {
+					if file.IsDir() {
+						jsonTree = append(jsonTree, applyConfigsForJson(tabSpace+"{\"type\":\"directory\",\"name\":", file, path, c))
+					} else {
+						jsonTree = append(jsonTree, applyConfigsForJson(tabSpace+"{\"type\":\"file\",\"name\":", file, path, c))
+					}
+				}
+			}
+
+			return nil
+		})
+	if err != nil {
+		log.Fatal(err)
+	}
+	if c.dirOnly {
+		jsonTree = append(jsonTree, fmt.Sprintf("{\"type\":\"report\",\"directories\": %d}", dirCount))
+	} else {
+		jsonTree = append(jsonTree, fmt.Sprintf("{\"type\":\"report\",\"directories\": %d \"files\":%d}", dirCount, fileCount-dirCount))
+	}
+	jsonTree = append(jsonTree, "]")
+	return jsonTree
+}
+
+func applyConfigsForJson(tabSpace string, file os.FileInfo, path string, c configs) string {
+	if c.relPath && c.perm {
+		return tabSpace + "[" + file.Mode().Perm().String() + "]" + path + "\"}"
+	} else if !c.relPath && c.perm {
+		return tabSpace + "[" + file.Mode().Perm().String() + "]" + file.Name() + "\"}"
+	} else if c.relPath && !c.perm {
+		return tabSpace + path + "\"}"
+	} else {
+		return tabSpace + "\"" + file.Name() + "\"}"
 	}
 }
 
@@ -205,75 +283,6 @@ func printDir(path string) {
 	}
 	for _, e := range entries {
 		fmt.Println(e.Name())
-	}
-}
-
-func printJson(dirPath string, c configs) {
-	var dirCount, fileCount int
-	var jsonTree []string
-	jsonTree = append(jsonTree, "[")
-	err := filepath.Walk(dirPath,
-		func(path string, file os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			var tabSpace string
-			currentPath := strings.Split(path, "/")
-			var level int
-			if c.level != 0 {
-				level = c.level
-			} else {
-				level = len(currentPath)
-			}
-			for i := 0; i < len(currentPath); i++ {
-				if path == dirPath {
-					continue
-				}
-				if i == len(currentPath)-1 {
-					// fmt.Println(i)
-					tabSpace = tabSpace + "\t"
-				} else {
-					tabSpace = "\t" + tabSpace
-				}
-
-			}
-			if file.IsDir() {
-				dirCount++
-				if c.dirOnly {
-					if len(currentPath) <= level {
-						jsonTree = append(jsonTree, applyCommands1(tabSpace, file, path, c))
-						// fmt.Println(applyCommands(tabSpace, file, path, c))
-					}
-				}
-			}
-			fileCount++
-			if !c.dirOnly {
-				if len(currentPath) <= level {
-					jsonTree = append(jsonTree, applyCommands1(tabSpace, file, path, c))
-				}
-			}
-
-			return nil
-		})
-	if err != nil {
-		log.Fatal(err)
-	}
-	if c.dirOnly {
-		fmt.Println("\n", dirCount, "directories")
-	} else {
-		fmt.Println("\n", dirCount, "directories,", fileCount-dirCount, "files")
-	}
-}
-
-func applyCommands1(tabSpace string, file os.FileInfo, path string, c configs) string {
-	if c.relPath && c.perm {
-		return tabSpace + "[" + file.Mode().Perm().String() + "]" + path
-	} else if !c.relPath && c.perm {
-		return tabSpace + "[" + file.Mode().Perm().String() + "]" + file.Name()
-	} else if c.relPath && !c.perm {
-		return tabSpace + path
-	} else {
-		return tabSpace + file.Name()
 	}
 }
 
