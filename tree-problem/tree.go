@@ -43,13 +43,7 @@ func main() {
 	if err != nil {
 		log.Printf("tree %s: %v\n", dirPath, err)
 	}
-	if c.dirOnly {
-		res = fmt.Sprintf("%v\n%v directories", res, r.dirCount-(r.fileCount+1))
-	} else {
-		res = fmt.Sprintf("%v\n%v directories, %v files", res, r.dirCount-(r.fileCount+1), r.fileCount)
-	}
-
-	fmt.Println(res)
+	fmt.Println(appendReport(res, r, c))
 }
 
 func parseArgs() configs {
@@ -79,10 +73,6 @@ func tree(root, indent, line, res string, r *report, c configs, depth int) (stri
 	if err != nil {
 		return "", fmt.Errorf("could not stat %s: %v", root, err)
 	}
-
-	// fmt.Println(line + fi.Name())
-	// res += line + fi.Mode().Perm().String() + root + "/" + fi.Name() + "\n"
-
 	res += line + applyConfigs(fi, root, c) + "\n"
 	r.dirCount++
 	if !fi.IsDir() {
@@ -133,6 +123,17 @@ func applyConfigs(file os.FileInfo, path string, c configs) string {
 		return file.Name()
 	}
 }
+
+func appendReport(res string, r report, c configs) string {
+	if c.dirOnly {
+		res = fmt.Sprintf("%v\n%v directories", res, r.dirCount-(r.fileCount+1))
+	} else {
+		res = fmt.Sprintf("%v\n%v directories, %v files", res, r.dirCount-(r.fileCount+1), r.fileCount)
+	}
+	return res
+}
+
+// the new approach stops here
 
 func printTree(dirPath string, c configs) {
 	var dirTree []string
