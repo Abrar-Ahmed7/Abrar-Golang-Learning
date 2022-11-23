@@ -12,22 +12,44 @@ import (
 	"container/list"
 )
 
+type report struct {
+	dirCount, fileCount int
+}
+
 type configs struct {
 	dirOnly, relPath, perm, json bool
 	level                        int
 }
 
+//	type struct {
+//		root, indent, line, res string
+//	}
 const (
 	verLine = "│"
 	horLine = "──"
 	vhLine  = verLine + horLine
+	endLine = "└──"
 )
 
 func main() {
 	dirPath := os.Args[len(os.Args)-1]
 	c := parseArgs()
-	printTree(dirPath, c)
+	// printTree(dirPath, c)
+	// var r report
+	// var res string
+	// var err error
+	r := report{}
+	res, err := tree(dirPath, "", "", "", &r, c, 0)
+	if err != nil {
+		log.Printf("tree %s: %v\n", dirPath, err)
+	}
+	if c.dirOnly {
+		res = fmt.Sprintf("%v\n%v directories", res, r.dirCount-(r.fileCount+1))
+	} else {
+		res = fmt.Sprintf("%v\n%v directories, %v files", res, r.dirCount-(r.fileCount+1), r.fileCount)
+	}
 
+	fmt.Println(res)
 }
 
 func parseArgs() configs {
@@ -50,6 +72,66 @@ func parseArgs() configs {
 		}
 	}
 	return c
+}
+
+func tree(root, indent, line, res string, r *report, c configs, depth int) (string, error) {
+	fi, err := os.Stat(root)
+	if err != nil {
+		return "", fmt.Errorf("could not stat %s: %v", root, err)
+	}
+
+	// fmt.Println(line + fi.Name())
+	// res += line + fi.Mode().Perm().String() + root + "/" + fi.Name() + "\n"
+
+	res += line + applyConfigs(fi, root, c) + "\n"
+	r.dirCount++
+	if !fi.IsDir() {
+		r.fileCount++
+		return res, nil
+	}
+
+	if c.level != 0 && c.level == depth {
+		return res, nil
+	}
+	fis, err := ioutil.ReadDir(root)
+	if err != nil {
+		return res, fmt.Errorf("could not read dir %s: %v", root, err)
+	}
+	var names []string
+	for _, fi := range fis {
+		if fi.Name()[0] != '.' {
+			if c.dirOnly && !fi.IsDir() {
+				continue
+			}
+			names = append(names, fi.Name())
+		}
+	}
+
+	for i, name := range names {
+		add := verLine + "  "
+		if i == len(names)-1 {
+			line = indent + endLine
+			add = "   "
+		} else {
+			line = indent + vhLine
+		}
+		if res, err = tree(filepath.Join(root, name), indent+add, line, res, r, c, depth+1); err != nil {
+			return res, err
+		}
+	}
+	return res, nil
+}
+
+func applyConfigs(file os.FileInfo, path string, c configs) string {
+	if c.relPath && c.perm {
+		return "[" + file.Mode().Perm().String() + "]" + path + "/" + file.Name()
+	} else if !c.relPath && c.perm {
+		return "[" + file.Mode().Perm().String() + "]" + file.Name()
+	} else if c.relPath && !c.perm {
+		return path + "/" + file.Name()
+	} else {
+		return file.Name()
+	}
 }
 
 func printTree(dirPath string, c configs) {
@@ -95,16 +177,14 @@ func getDirTree(dirPath string, c configs) []string {
 				dirCount++
 				if c.dirOnly {
 					if len(currentPath) <= level {
-						dirTree = append(dirTree, applyConfigs(tabSpace, file, path, c))
-						// fmt.Println(applyCommands(tabSpace, file, path, c))
+						dirTree = append(dirTree, applyConfigs1(tabSpace, file, path, c))
 					}
 				}
 			}
 			fileCount++
 			if !c.dirOnly {
 				if len(currentPath) <= level {
-					dirTree = append(dirTree, applyConfigs(tabSpace, file, path, c))
-					// fmt.Println(applyConfigs(tabSpace, file, path, c))
+					dirTree = append(dirTree, applyConfigs1(tabSpace, file, path, c))
 				}
 			}
 			return nil
@@ -114,14 +194,13 @@ func getDirTree(dirPath string, c configs) []string {
 	}
 	if c.dirOnly {
 		dirTree = append(dirTree, "\n"+strconv.Itoa(dirCount)+" directories")
-		// fmt.Println("\n", dirCount, "directories")
 	} else {
 		dirTree = append(dirTree, "\n"+strconv.Itoa(dirCount)+" directories, "+strconv.Itoa(fileCount-dirCount)+" files")
 	}
 	return dirTree
 }
 
-func applyConfigs(tabSpace string, file os.FileInfo, path string, c configs) string {
+func applyConfigs1(tabSpace string, file os.FileInfo, path string, c configs) string {
 	if c.relPath && c.perm {
 		return tabSpace + "[" + file.Mode().Perm().String() + "]" + path
 	} else if !c.relPath && c.perm {
@@ -191,6 +270,76 @@ func getJsonTree(dirPath string, c configs) []string {
 }
 
 func applyConfigsForJson(tabSpace string, file os.FileInfo, path string, c configs) string {
+	if c.relPath && c.perm {
+		return tabSpace + "[" + file.Mode().Perm().String() + "]" + path + "\"}"
+	} else if !c.relPath && c.perm {
+		return tabSpace + "[" + file.Mode().Perm().String() + "]" + file.Name() + "\"}"
+	} else if c.relPath && !c.perm {
+		return tabSpace + path + "\"}"
+	} else {
+		return tabSpace + "\"" + file.Name() + "\"}"
+	}
+}
+
+func getXmlTree(dirPath string, c configs) []string {
+	var dirCount, fileCount int
+	var xmlTree []string
+	xmlTree = append(xmlTree, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
+	xmlTree = append(xmlTree, "<tree>")
+	err := filepath.Walk(dirPath,
+		func(path string, file os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			var tabSpace string
+			currentPath := strings.Split(path, "/")
+			var level int
+			if c.level != 0 {
+				level = c.level
+			} else {
+				level = len(currentPath)
+			}
+			for i := 0; i < len(currentPath); i++ {
+				if path == dirPath {
+					continue
+				}
+				tabSpace = tabSpace + "  "
+			}
+			if file.IsDir() {
+				dirCount++
+				if c.dirOnly {
+					if len(currentPath) <= level {
+						xmlTree = append(xmlTree, applyConfigsForJson(tabSpace+"{\"type\":\"directory\",\"name\":", file, path, c))
+						// fmt.Println(applyCommands(tabSpace, file, path, c))
+					}
+				}
+			}
+			fileCount++
+			if !c.dirOnly {
+				if len(currentPath) <= level {
+					if file.IsDir() {
+						xmlTree = append(xmlTree, applyConfigsForJson(tabSpace+"{\"type\":\"directory\",\"name\":", file, path, c))
+					} else {
+						xmlTree = append(xmlTree, applyConfigsForJson(tabSpace+"{\"type\":\"file\",\"name\":", file, path, c))
+					}
+				}
+			}
+
+			return nil
+		})
+	if err != nil {
+		log.Fatal(err)
+	}
+	if c.dirOnly {
+		xmlTree = append(xmlTree, fmt.Sprintf("{\"type\":\"report\",\"directories\": %d}", dirCount))
+	} else {
+		xmlTree = append(xmlTree, fmt.Sprintf("{\"type\":\"report\",\"directories\": %d \"files\":%d}", dirCount, fileCount-dirCount))
+	}
+	xmlTree = append(xmlTree, "</tree>")
+	return xmlTree
+}
+
+func applyConfigsForXml(tabSpace string, file os.FileInfo, path string, c configs) string {
 	if c.relPath && c.perm {
 		return tabSpace + "[" + file.Mode().Perm().String() + "]" + path + "\"}"
 	} else if !c.relPath && c.perm {
