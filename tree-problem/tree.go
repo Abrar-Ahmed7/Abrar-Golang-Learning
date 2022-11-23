@@ -133,7 +133,47 @@ func appendReport(res string, r report, c configs) string {
 	return res
 }
 
-// the new approach stops here
+// working on it
+
+func jsonTree(root, indent, line, res string, r *report, c configs, depth int) (string, error) {
+	fi, err := os.Stat(root)
+	if err != nil {
+		return "", fmt.Errorf("could not stat %s: %v", root, err)
+	}
+	res += line + applyConfigs(fi, root, c) + "\n"
+	r.dirCount++
+	if !fi.IsDir() {
+		r.fileCount++
+		return res, nil
+	}
+
+	if c.level != 0 && c.level == depth {
+		return res, nil
+	}
+	fis, err := ioutil.ReadDir(root)
+	if err != nil {
+		return res, fmt.Errorf("could not read dir %s: %v", root, err)
+	}
+	var names []string
+	for _, fi := range fis {
+		if fi.Name()[0] != '.' {
+			if c.dirOnly && !fi.IsDir() {
+				continue
+			}
+			names = append(names, fi.Name())
+		}
+	}
+
+	for _, name := range names {
+		add := "   "
+		if res, err = tree(filepath.Join(root, name), indent+add, line, res, r, c, depth+1); err != nil {
+			return res, err
+		}
+	}
+	return res, nil
+}
+
+// the new approach ends here
 
 func printTree(dirPath string, c configs) {
 	var dirTree []string
