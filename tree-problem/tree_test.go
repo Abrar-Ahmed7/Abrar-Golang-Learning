@@ -7,6 +7,74 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+
+func TestTree(t *testing.T) {
+
+	// creating dir
+	if err := os.MkdirAll("resources/test-folder1/test-folder2", os.ModePerm); err != nil {
+		log.Fatal(err)
+	}
+	_, err1 := os.Create("resources/test-folder1/test-folder2/sample.txt")
+	if err1 != nil {
+		fmt.Printf("Unable to open file: %s", err1)
+	}
+	_, err2 := os.Create("resources/sample1.txt")
+	if err2 != nil {
+		fmt.Printf("Unable to open file: %s", err2)
+	}
+
+
+    tests := []struct {
+		dirPath string
+        input configs
+		r report
+        want  string
+    }{
+        {
+			dirPath: "./resources",
+		 	input: configs{},
+			report: &r,
+			want: "resources\n" +
+            "│──sample1.txt\n" +
+            "└──test-folder1\n" +
+            "   └──test-folder2\n" +
+            "      └──sample.txt\n" +
+            "\n" +
+            "2 directories, 2 files",
+		},
+        {
+			dirPath: "./resources",
+		 	input: configs{dirOnly: true},
+			report: &r,
+			want: "resources\n" +
+            "└──test-folder1\n" +
+            "   └──test-folder2\n" +
+            "\n" +
+            "2 directories",
+		},
+        {
+			dirPath: "./resources",
+		 	input: configs{level: 1},
+			report: &r,
+			want: "resources\n" +
+            "│──sample1.txt\n" +
+            "└──test-folder1\n" +
+            "\n" +
+            "1 directories, 1 files",
+		},
+    } 
+
+    for _, tc := range tests {
+        got := tree(tc.dirPath,"","","",&tc.r,tc.input,0)
+        if !reflect.DeepEqual(tc.want, got) {
+            t.Fatalf("expected: %v, got: %v", tc.want, got)
+        }
+    }
+
+	// deleting the created dir
+	os.RemoveAll("./resources/")
+}
+
 func TestGetDirTree(t *testing.T) {
 
 	// creating dir
@@ -17,15 +85,18 @@ func TestGetDirTree(t *testing.T) {
 	if err != nil {
 		fmt.Printf("Unable to open file: %s", err)
 	}
-	_, err1 := os.Create("resources/sample1.txt")
-	if err1 != nil {
+	_, err := os.Create("resources/sample1.txt")
+	if err != nil {
 		fmt.Printf("Unable to open file: %s", err)
 	}
 
 	dirPath := "./resources/"
+	var got string
+	var want string
+	var c configs
+	got = tree(dirPath,"", "", "", &r, c, 0)
 
-	c := configs{}
-	gotTree := getDirTree(dirPath, c)
+	want =
 
 	wantedTree := []string{
 		"resources",
@@ -39,9 +110,9 @@ func TestGetDirTree(t *testing.T) {
 			t.Errorf("Trees don't match")
 		}
 	}
-
+	c.dirOnly= true
 	c = configs {
-		dirOnly: true
+		dirOnly: true,
 	}
 	gotDirTree := getDirTree(dirPath, c)
 
@@ -58,7 +129,7 @@ func TestGetDirTree(t *testing.T) {
 	}
 
 	c = configs{
-		perm: true
+		perm: true,
 	}
 	gotPermTree := getDirTree(dirPath, c)
 
