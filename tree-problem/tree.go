@@ -94,8 +94,10 @@ func tree(root, indent, line, res string, r *report, c configs, depth int) (stri
 	if err != nil {
 		return "", fmt.Errorf("could not stat %s: %v", root, err)
 	}
+
 	res += line + applyConfigs(fi, root, c) + "\n"
 	r.dirCount++
+
 	if !fi.IsDir() {
 		r.fileCount++
 		return res, nil
@@ -108,7 +110,9 @@ func tree(root, indent, line, res string, r *report, c configs, depth int) (stri
 	if err != nil {
 		return res, fmt.Errorf("could not read dir %s: %v", root, err)
 	}
+
 	var names []string
+
 	for _, fi := range fis {
 		if fi.Name()[0] != '.' {
 			if c.dirOnly && !fi.IsDir() {
@@ -130,6 +134,7 @@ func tree(root, indent, line, res string, r *report, c configs, depth int) (stri
 			return res, err
 		}
 	}
+
 	return res, nil
 }
 
@@ -138,8 +143,10 @@ func jsonTree(root, indent, res string, r *report, c configs, depth int) (string
 	if err != nil {
 		return "", fmt.Errorf("could not stat %s: %v", root, err)
 	}
+
 	res += indent + applyConfigsForJson(fi, root, c)
 	r.dirCount++
+
 	if !fi.IsDir() {
 		r.fileCount++
 		res += "\n"
@@ -149,15 +156,18 @@ func jsonTree(root, indent, res string, r *report, c configs, depth int) (string
 	if c.level != 0 && c.level == depth-1 {
 		return res, nil
 	}
+
 	fis, err := ioutil.ReadDir(root)
 	if err != nil {
 		return res, fmt.Errorf("could not read dir %s: %v", root, err)
 	}
+
 	if len(fis) == 0 {
 		res += "}\n"
 	} else {
 		res += ",\"contents\":[\n"
 	}
+
 	var names []string
 	for _, fi := range fis {
 		if fi.Name()[0] != '.' {
@@ -179,6 +189,7 @@ func jsonTree(root, indent, res string, r *report, c configs, depth int) (string
 			res = res[:l] + "," + res[l:]
 		}
 	}
+
 	return res, nil
 }
 
@@ -187,8 +198,10 @@ func xmlTree(root, indent, res string, r *report, c configs, depth int) (string,
 	if err != nil {
 		return "", fmt.Errorf("could not stat %s: %v", root, err)
 	}
+
 	res += indent + applyConfigsForXml(fi, root, c)
 	r.dirCount++
+
 	if !fi.IsDir() {
 		r.fileCount++
 		res += "\n"
@@ -198,15 +211,18 @@ func xmlTree(root, indent, res string, r *report, c configs, depth int) (string,
 	if c.level != 0 && c.level == depth-1 {
 		return res, nil
 	}
+
 	fis, err := ioutil.ReadDir(root)
 	if err != nil {
 		return res, fmt.Errorf("could not read dir %s: %v", root, err)
 	}
+
 	if len(fis) == 0 {
 		res += "</directory>\n"
 	} else {
 		res += "\n"
 	}
+
 	var names []string
 	for _, fi := range fis {
 		if fi.Name()[0] != '.' {
@@ -226,6 +242,7 @@ func xmlTree(root, indent, res string, r *report, c configs, depth int) (string,
 			res += indent + "</directory>\n"
 		}
 	}
+
 	return res, nil
 }
 
