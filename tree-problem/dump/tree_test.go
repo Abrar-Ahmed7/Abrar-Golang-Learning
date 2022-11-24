@@ -9,7 +9,6 @@ import (
 )
 
 func TestTree(t *testing.T) {
-
 	// creating dir
 	if err := os.MkdirAll("resources/test-folder1/test-folder2", os.ModePerm); err != nil {
 		log.Fatal(err)
