@@ -48,7 +48,7 @@ func TestTree(t *testing.T) {
 				"└──test-folder1\n" +
 				"   └──test-folder2\n" +
 				"\n" +
-				"2 directories",
+				"3 directories",
 		},
 		{
 			dirPath: "./resources",
@@ -111,23 +111,20 @@ func TestJsonTree(t *testing.T) {
 				"  {\"type\":\"report\",\"directories\":3, \"files\":2}\n" +
 				"]",
 		},
-		// {
-		// 	dirPath: "./resources",
-		// 	input:   configs{dirOnly: true},
-		// 	r:       report{},
-		// 	want: "[\n" +
-		// 	"  {\"type\":\"directory\",\"name\":\"resources\",\"contents\":[\n" +
-		// 	"    {\"type\":\"file\",\"name\":\"sample1.txt\"},\n" +
-		// 	"    {\"type\":\"directory\",\"name\":\"test-folder1\",\"contents\":[\n" +
-		// 	"      {\"type\":\"directory\",\"name\":\"test-folder2\",\"contents\":[\n" +
-		// 	"        {\"type\":\"file\",\"name\":\"sample.txt\"}\n" +
-		// 	"      ]}\n" +
-		// 	"    ]}\n" +
-		// 	"  ]}\n" +
-		// 	",\n" +
-		// 	"  {\"type\":\"report\",\"directories\":2, \"files\":2}\n" +
-		// 	"]",
-		// },
+		{
+			dirPath: "./resources",
+			input:   configs{json: true, dirOnly: true},
+			r:       report{},
+			want: "[\n" +
+				"  {\"type\":\"directory\",\"name\":\"resources\",\"contents\":[\n" +
+				"    {\"type\":\"directory\",\"name\":\"test-folder1\",\"contents\":[\n" +
+				"      {\"type\":\"directory\",\"name\":\"test-folder2\",\"contents\":[\n" +
+				"    ]}\n" +
+				"  ]}\n" +
+				",\n" +
+				"  {\"type\":\"report\",\"directories\":3}\n" +
+				"]",
+		},
 		{
 			dirPath: "./resources",
 			input:   configs{json: true, level: 1},
@@ -135,7 +132,8 @@ func TestJsonTree(t *testing.T) {
 			want: "[\n" +
 				"  {\"type\":\"directory\",\"name\":\"resources\",\"contents\":[\n" +
 				"    {\"type\":\"file\",\"name\":\"sample1.txt\"},\n" +
-				"    {\"type\":\"directory\",\"name\":\"test-folder1\"  ]}\n" +
+				"    {\"type\":\"directory\",\"name\":\"test-folder1\"}\n" +
+				"  ]}\n" +
 				",\n" +
 				"  {\"type\":\"report\",\"directories\":2, \"files\":1}\n" +
 				"]",
@@ -182,15 +180,15 @@ func TestXmlTree(t *testing.T) {
 			want: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
 				"<tree>\n" +
 				"  <directory name=\"resources\">\n" +
-				"	<file name=\"sample1.txt\"></file>\n" +
-				"	<directory name=\"test-folder1\">\n" +
-				"	  <directory name=\"test-folder2\">\n" +
-				"		<file name=\"sample.txt\"></file>\n" +
-				"	  </directory>\n" +
-				"	</directory>\n" +
+				"    <file name=\"sample1.txt\"></file>\n" +
+				"    <directory name=\"test-folder1\">\n" +
+				"      <directory name=\"test-folder2\">\n" +
+				"        <file name=\"sample.txt\"></file>\n" +
+				"      </directory>\n" +
+				"    </directory>\n" +
 				"  </directory>\n" +
 				"  <report>\n    <directories>" +
-				"3</directories>\n	<files>2</files>" +
+				"3</directories>\n    <files>2</files>" +
 				"\n  </report>" +
 				"\n</tree>",
 		},
@@ -201,12 +199,12 @@ func TestXmlTree(t *testing.T) {
 			want: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
 				"<tree>\n" +
 				"  <directory name=\"resources\">\n" +
-				"	<directory name=\"test-folder1\">\n" +
-				"	  <directory name=\"test-folder2\">\n" +
-				"	  </directory>\n" +
-				"	</directory>\n" +
+				"    <directory name=\"test-folder1\">\n" +
+				"      <directory name=\"test-folder2\">\n" +
+				"    </directory>\n" +
+				"  </directory>\n" +
 				"  <report>\n    <directories>" +
-				"2</directories>" +
+				"3</directories>" +
 				"\n  </report>" +
 				"\n</tree>",
 		},
@@ -217,10 +215,11 @@ func TestXmlTree(t *testing.T) {
 			want: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
 				"<tree>\n" +
 				"  <directory name=\"resources\">\n" +
-				"	<file name=\"sample1.txt\"></file>\n" +
-				"	<directory name=\"test-folder1\">  </directory>" +
+				"    <file name=\"sample1.txt\"></file>\n" +
+				"    <directory name=\"test-folder1\"></directory>\n" +
+				"  </directory>\n" +
 				"  <report>\n    <directories>" +
-				"2</directories>\n	<files>1</files>" +
+				"2</directories>\n    <files>1</files>" +
 				"\n  </report>" +
 				"\n</tree>",
 		},

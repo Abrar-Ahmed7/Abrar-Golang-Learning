@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -15,8 +17,8 @@ type report struct {
 }
 
 type configs struct {
-	dirOnly, relPath, perm, json, xml bool
-	level                             int
+	dirOnly, relPath, perm, json, xml, sortByTime bool
+	level                                         int
 }
 
 const (
@@ -45,7 +47,7 @@ func main() {
 		if err != nil {
 			log.Printf("tree %s: %v\n", dirPath, err)
 		}
-
+		// fmt.Println(res)
 		fmt.Println(addSqBrkt(appendReport(res, r, c)))
 	} else if c.xml {
 		res, err = xmlTree(dirPath, "  ", "", &r, c, 1)
@@ -85,6 +87,9 @@ func parseArgs() configs {
 		if os.Args[i] == "-X" {
 			c.xml = true
 		}
+		if os.Args[i] == "-t" {
+			c.sortByTime = true
+		}
 	}
 	return c
 }
@@ -111,16 +116,13 @@ func tree(root, indent, line, res string, r *report, c configs, depth int) (stri
 		return res, fmt.Errorf("could not read dir %s: %v", root, err)
 	}
 
-	var names []string
-
-	for _, fi := range fis {
-		if fi.Name()[0] != '.' {
-			if c.dirOnly && !fi.IsDir() {
-				continue
-			}
-			names = append(names, fi.Name())
-		}
+	if c.sortByTime {
+		sort.Slice(fis, func(i, j int) bool {
+			return fis[i].ModTime().Unix() < fis[j].ModTime().Unix()
+		})
 	}
+
+	names := ignoreDotFiles(fis, c)
 
 	for i, name := range names {
 		add := VER_LINE + "  "
@@ -154,6 +156,7 @@ func jsonTree(root, indent, res string, r *report, c configs, depth int) (string
 	}
 
 	if c.level != 0 && c.level == depth-1 {
+		res += "}\n"
 		return res, nil
 	}
 
@@ -168,15 +171,13 @@ func jsonTree(root, indent, res string, r *report, c configs, depth int) (string
 		res += ",\"contents\":[\n"
 	}
 
-	var names []string
-	for _, fi := range fis {
-		if fi.Name()[0] != '.' {
-			if c.dirOnly && !fi.IsDir() {
-				continue
-			}
-			names = append(names, fi.Name())
-		}
+	if c.sortByTime {
+		sort.Slice(fis, func(i, j int) bool {
+			return fis[i].ModTime().Unix() < fis[j].ModTime().Unix()
+		})
 	}
+
+	names := ignoreDotFiles(fis, c)
 
 	for i, name := range names {
 		if res, err = jsonTree(filepath.Join(root, name), strings.Repeat("  ", depth+1), res, r, c, depth+1); err != nil {
@@ -209,6 +210,10 @@ func xmlTree(root, indent, res string, r *report, c configs, depth int) (string,
 	}
 
 	if c.level != 0 && c.level == depth-1 {
+		if fi.IsDir() {
+			res += "</directory>"
+		}
+		res += "\n"
 		return res, nil
 	}
 
@@ -223,19 +228,15 @@ func xmlTree(root, indent, res string, r *report, c configs, depth int) (string,
 		res += "\n"
 	}
 
-	var names []string
-	for _, fi := range fis {
-		if fi.Name()[0] != '.' {
-			if c.dirOnly && !fi.IsDir() {
-				continue
-			}
-			names = append(names, fi.Name())
-		}
+	if c.sortByTime {
+		sort.Slice(fis, func(i, j int) bool {
+			return fis[i].ModTime().Unix() < fis[j].ModTime().Unix()
+		})
 	}
+	names := ignoreDotFiles(fis, c)
 
 	for i, name := range names {
 		if res, err = xmlTree(filepath.Join(root, name), strings.Repeat("  ", depth+1), res, r, c, depth+1); err != nil {
-
 			return res, err
 		}
 		if i == len(names)-1 {
@@ -306,27 +307,40 @@ func applyConfigsForXml(file os.FileInfo, path string, c configs) string {
 	}
 }
 
+func ignoreDotFiles(fis []fs.FileInfo, c configs) []string {
+	var names []string
+	for _, fi := range fis {
+		if fi.Name()[0] != '.' {
+			if c.dirOnly && !fi.IsDir() {
+				continue
+			}
+			names = append(names, fi.Name())
+		}
+	}
+	return names
+}
+
 func appendReport(res string, r report, c configs) string {
 	if c.json {
 		res += ",\n"
 		if c.dirOnly {
-			res = fmt.Sprintf("  {\"type\":\"report\",\"directories\":%v}", r.dirCount-(r.fileCount+1))
+			res += fmt.Sprintf("  {\"type\":\"report\",\"directories\":%v}", r.dirCount-(r.fileCount))
 		} else {
-			res += fmt.Sprintf("  {\"type\":\"report\",\"directories\":%v, \"files\":%v}", r.dirCount-(r.fileCount+1), r.fileCount)
+			res += fmt.Sprintf("  {\"type\":\"report\",\"directories\":%v, \"files\":%v}", r.dirCount-(r.fileCount), r.fileCount)
 		}
 	} else if c.xml {
 		res += "  <report>\n    <directories>"
 		if c.dirOnly {
-			res += fmt.Sprintf("%v</directories>", r.dirCount-(r.fileCount+1))
+			res += fmt.Sprintf("%v</directories>", r.dirCount-(r.fileCount))
 		} else {
-			res += fmt.Sprintf("%v</directories>\n    <files>%v</files>", r.dirCount-(r.fileCount+1), r.fileCount)
+			res += fmt.Sprintf("%v</directories>\n    <files>%v</files>", r.dirCount-(r.fileCount), r.fileCount)
 		}
 		res += "\n  </report>"
 	} else {
 		if c.dirOnly {
-			res = fmt.Sprintf("%v\n%v directories", res, r.dirCount-(r.fileCount+1))
+			res = fmt.Sprintf("%v\n%v directories", res, r.dirCount-(r.fileCount))
 		} else {
-			res = fmt.Sprintf("%v\n%v directories, %v files", res, r.dirCount-(r.fileCount+1), r.fileCount)
+			res = fmt.Sprintf("%v\n%v directories, %v files", res, r.dirCount-(r.fileCount), r.fileCount)
 		}
 	}
 	return res
